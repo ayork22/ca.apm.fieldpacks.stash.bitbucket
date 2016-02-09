@@ -173,8 +173,13 @@ public class StashFPwrapper {
 		};
 
 		// Executer to trigger runnable thread. Delay time is defined in the
-		// stash.properties
+		// stash.properties  DEFAULTS to 5 minutes
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-		executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")), TimeUnit.MINUTES);
+		if (Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
+			executor.scheduleAtFixedRate(servers, 0, 5, TimeUnit.MINUTES);
+		}
+		else {
+			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")), TimeUnit.MINUTES);
+		}
 	}
 }
