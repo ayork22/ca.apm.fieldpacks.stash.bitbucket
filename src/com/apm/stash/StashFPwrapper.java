@@ -30,9 +30,9 @@ public class StashFPwrapper {
 
 			public void run() {
 
-				String MetricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
+				String metricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
 
-				logger.debug("MetricLocation  = " + MetricRootLocation);
+				logger.debug("MetricLocation  = " + metricRootLocation);
 
 				// *****Create Metrics******
 				// Array of actual Metrics WITHOUT the metrics KEY in front
@@ -53,21 +53,38 @@ public class StashFPwrapper {
 
 				// add SIZE to Metrics Using CreateMetric method
 				// metricArray is what is used to build Introscope metrics
-				metricArray.add(createMetric("LongCounter", MetricRootLocation + ":Number of Repos",
+				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
 						mainWebServiceJSON.remove("size")));
 				metricArray.add(
-						createMetric("LongCounter", MetricRootLocation + ":Limit", mainWebServiceJSON.remove("limit")));
+						createMetric("LongCounter", metricRootLocation + ":Limit", mainWebServiceJSON.remove("limit")));
 
 				// *****Grab Project & Repository info******
 
 				JSONArray values = (JSONArray) mainWebServiceJSON.get("values");
+
+				// ****** # of Users *****************
+				String UserURL = GetPropertiesFile.getPropertyValue("StashURL").replaceAll("/repos", "/users");
+				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
+						mainWebServiceJSON.remove("size")));
+
+				JSONObject userJSON = null;
+				try {
+					userJSON = (JSONObject) new JSONParser().parse(
+							WebServiceHandler.callURL(UserURL, (GetPropertiesFile.getPropertyValue("StashUserName")),
+									(GetPropertiesFile.getPropertyValue("StashPassword"))));
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				metricArray.add(
+						createMetric("LongCounter", metricRootLocation + ":Number of Users", userJSON.remove("size")));
 
 				// ******For loop over the Number of Values*******
 				// .size = Array size
 				for (int i = 0; i < values.size(); i++) {
 
 					JSONObject REPO = (JSONObject) values.get(i);
-					String metricLocation = MetricRootLocation + "|" + ((JSONObject) REPO.get("project")).get("name")
+					String metricLocation = metricRootLocation + "|" + ((JSONObject) REPO.get("project")).get("name")
 							+ "|" + REPO.get("name");
 							// Casting to Array
 
@@ -146,7 +163,7 @@ public class StashFPwrapper {
 								.add(createMetric("LongCounter", metricLocation + ":Pull Requests - Merged", merges));
 						metricArray.add(
 								createMetric("LongCounter", metricLocation + ":Pull Requests - Declined", declines));
-						metricArray.add(createMetric("StringEvent", MetricRootLocation + ":PluginSuccess", ("YES")));
+						metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
 					}
 				}
 
@@ -173,13 +190,13 @@ public class StashFPwrapper {
 		};
 
 		// Executer to trigger runnable thread. Delay time is defined in the
-		// stash.properties  DEFAULTS to 5 minutes
+		// stash.properties DEFAULTS to 5 minutes
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
 		if (Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
 			executor.scheduleAtFixedRate(servers, 0, 5, TimeUnit.MINUTES);
-		}
-		else {
-			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")), TimeUnit.MINUTES);
+		} else {
+			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")),
+					TimeUnit.MINUTES);
 		}
 	}
 }
