@@ -25,7 +25,15 @@ StashFP.jar & stash.propeties
 3. Edit <EPAgentHome>/IntroscopeEPAgent.properties file
 4. Add StashFP.jar as STATELESS plugin.  
   * Example Below
-5. Set time delay for plugin to run`
+5. Set time delay for plugin to run
+
+6. Set ClassPath <EPAgentHome>/bin/EPACtrl.sh
+	Append the following ":epaplugins/StashFP.jar" to the "EpaCmd="java -Xms${MIN_HEAP_VAL_IN_MB}m -Xmx${MAX_HEAP_VAL_IN_MB}m -cp" line
+	# the command to start the EPAgent
+
+	* Example Below
+	EpaCmd="java -Xms${MIN_HEAP_VAL_IN_MB}m -Xmx${MAX_HEAP_VAL_IN_MB}m -cp lib/EPAgent.jar:lib/IntroscopeServices.jar:lib/Agent.jar:epaplugins/epaMQMonitor/epaMQMonitor.jar:epaplugins/epaMQMonitor:epaplugins/epaMQMonitor/lib/com.ibm.mq.pcf.jar:epaplugins/epaMQMonitor/lib/com.ibm.mq.jar:epaplugins/epaMQMonitor/lib/connector.jar:epaplugins/epaMQMonitor/lib/com.ibm.mqjms.jar:epaplugins/StashFP.jar com.wily.introscope.api.IntroscopeEPAgent"
+
 ```
 ```
 # Stateless Plugins`

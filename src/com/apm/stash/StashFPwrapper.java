@@ -49,14 +49,15 @@ public class StashFPwrapper {
 				} catch (ParseException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
+					logger.error("No match for user/password combination");
 				}
 
 				// add SIZE to Metrics Using CreateMetric method
 				// metricArray is what is used to build Introscope metrics
 				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
-						mainWebServiceJSON.remove("size")));
+						mainWebServiceJSON.get("size")));
 				metricArray.add(
-						createMetric("LongCounter", metricRootLocation + ":Limit", mainWebServiceJSON.remove("limit")));
+						createMetric("LongCounter", metricRootLocation + ":Limit", mainWebServiceJSON.get("limit")));
 
 				// *****Grab Project & Repository info******
 
@@ -65,7 +66,7 @@ public class StashFPwrapper {
 				// ****** # of Users *****************
 				String UserURL = GetPropertiesFile.getPropertyValue("StashURL").replaceAll("/repos", "/users");
 				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
-						mainWebServiceJSON.remove("size")));
+						mainWebServiceJSON.get("size")));
 
 				JSONObject userJSON = null;
 				try {
@@ -77,7 +78,7 @@ public class StashFPwrapper {
 					e.printStackTrace();
 				}
 				metricArray.add(
-						createMetric("LongCounter", metricRootLocation + ":Number of Users", userJSON.remove("size")));
+						createMetric("LongCounter", metricRootLocation + ":Number of Users", userJSON.get("size")));
 
 				// ******For loop over the Number of Values*******
 				// .size = Array size
@@ -120,11 +121,11 @@ public class StashFPwrapper {
 					// if size not zero do this
 					if (size != 0) {
 						metricArray.add(createMetric("LongCounter", metricLocation + ":Pull Requests - Total",
-								RepoJSON.remove("size")));
+								RepoJSON.get("size")));
 						metricArray.add(createMetric("StringEvent", metricLocation + ":Is Last Page",
-								RepoJSON.remove("isLastPage")));
+								RepoJSON.get("isLastPage")));
 						metricArray
-								.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.remove("limit")));
+								.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.get("limit")));
 
 						JSONArray PullState = (JSONArray) RepoJSON.get("values");
 
