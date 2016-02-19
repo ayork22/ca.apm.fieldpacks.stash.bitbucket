@@ -57,6 +57,8 @@ public class StashFPwrapper {
 						mainWebServiceJSON.get("size")));
 				metricArray.add(
 						createMetric("LongCounter", metricRootLocation + ":Limit", mainWebServiceJSON.get("limit")));
+				metricArray.add(createMetric("StringEvent", metricRootLocation + ":Is Last Page",
+						mainWebServiceJSON.get("isLastPage")));
 
 				// *****Grab Project & Repository info******
 
@@ -164,7 +166,11 @@ public class StashFPwrapper {
 					}
 				}
 				metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
-
+				
+				//Report TimeStamp of last plugin RunTime
+				long timestamp = System.currentTimeMillis();
+				metricArray.add(createMetric("TimeStamp", metricRootLocation + ":Last Reporting Interval", timestamp));
+				
 				JSONObject metricsToEPAgent = new JSONObject();
 				// pre-pends "metrics" to the 'metricArray as this is required
 				// by EPAgent API
