@@ -30,7 +30,9 @@ public class StashFPwrapper {
 			public void run() {
 
 				String metricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
-
+				// Add Rest API /repos to Stash URL provided in properties file
+				String StashRepoUrl = GetPropertiesFile.getPropertyValue("StashURL") + "/rest/api/1.0/repos";
+				logger.info("Stash Monitored URL = " + StashRepoUrl);
 				logger.debug("MetricLocation  = " + metricRootLocation);
 
 				// *****Create Metrics******
@@ -41,10 +43,9 @@ public class StashFPwrapper {
 				// Using Properties File to pass in 'callURL' parameters
 				JSONObject mainWebServiceJSON = null;
 				try {
-					mainWebServiceJSON = (JSONObject) new JSONParser()
-							.parse(WebServiceHandler.callURL(GetPropertiesFile.getPropertyValue("StashURL"),
-									(GetPropertiesFile.getPropertyValue("StashUserName")),
-									(GetPropertiesFile.getPropertyValue("StashPassword"))));
+					mainWebServiceJSON = (JSONObject) new JSONParser().parse(WebServiceHandler.callURL(StashRepoUrl,
+							(GetPropertiesFile.getPropertyValue("StashUserName")),
+							(GetPropertiesFile.getPropertyValue("StashPassword"))));
 				} catch (ParseException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -65,7 +66,7 @@ public class StashFPwrapper {
 				JSONArray values = (JSONArray) mainWebServiceJSON.get("values");
 
 				// ****** # of Users *****************
-				String UserURL = GetPropertiesFile.getPropertyValue("StashURL").replaceAll("/repos", "/users");
+				String UserURL = StashRepoUrl.replaceAll("/repos", "/users");
 				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
 						mainWebServiceJSON.get("size")));
 
@@ -166,11 +167,11 @@ public class StashFPwrapper {
 					}
 				}
 				metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
-				
-				//Report TimeStamp of last plugin RunTime
+
+				// Report TimeStamp of last plugin RunTime
 				long timestamp = System.currentTimeMillis();
 				metricArray.add(createMetric("TimeStamp", metricRootLocation + ":Last Reporting Interval", timestamp));
-				
+
 				JSONObject metricsToEPAgent = new JSONObject();
 				// pre-pends "metrics" to the 'metricArray as this is required
 				// by EPAgent API
@@ -193,15 +194,16 @@ public class StashFPwrapper {
 		};
 
 		// Executer to trigger runnable thread. Delay time is defined in the
-		// stash.properties DEFAULTS to 5 minutes
+		// stash.properties DEFAULTS to 5 minutes if no value provided or below 5 minutes
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-		if (Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
-			executor.scheduleAtFixedRate(servers, 0, 5, TimeUnit.MINUTES);
-		} else {
+		if ((GetPropertiesFile.getPropertyValue("delaytime").isEmpty()) || Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
+			executor.scheduleAtFixedRate(servers, 0, 2, TimeUnit.MINUTES);
+		} 
+			else {
 			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")),
 					TimeUnit.MINUTES);
 		}
-		//Loop to keep Main Thread alive
+		// Loop to keep Main Thread alive
 		while (true) {
 			try {
 				Thread.sleep(15000);
