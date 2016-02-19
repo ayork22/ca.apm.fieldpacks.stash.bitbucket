@@ -18,7 +18,6 @@ public class StashFPwrapper {
 
 	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws ParseException {
-
 		// ******Configure log4J*****
 		final Logger logger = Logger.getLogger(StashFPwrapper.class);
 		{
@@ -115,7 +114,6 @@ public class StashFPwrapper {
 					logger.debug("Pull Request URLs  = " + RepoURL);
 
 					long size = ((Long) RepoJSON.get("size")).intValue();
-
 					// *** If RepoJSON Array does NOT have any pull request info
 					// then skip that repository
 					// if size not zero do this
@@ -124,8 +122,7 @@ public class StashFPwrapper {
 								RepoJSON.get("size")));
 						metricArray.add(createMetric("StringEvent", metricLocation + ":Is Last Page",
 								RepoJSON.get("isLastPage")));
-						metricArray
-								.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.get("limit")));
+						metricArray.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.get("limit")));
 
 						JSONArray PullState = (JSONArray) RepoJSON.get("values");
 
@@ -164,9 +161,9 @@ public class StashFPwrapper {
 								.add(createMetric("LongCounter", metricLocation + ":Pull Requests - Merged", merges));
 						metricArray.add(
 								createMetric("LongCounter", metricLocation + ":Pull Requests - Declined", declines));
-						metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
 					}
 				}
+				metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
 
 				JSONObject metricsToEPAgent = new JSONObject();
 				// pre-pends "metrics" to the 'metricArray as this is required
@@ -186,7 +183,6 @@ public class StashFPwrapper {
 				metric.put("name", name);
 				metric.put("value", value);
 				return metric;
-
 			}
 		};
 
@@ -198,6 +194,15 @@ public class StashFPwrapper {
 		} else {
 			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")),
 					TimeUnit.MINUTES);
+		}
+		//Loop to keep Main Thread alive
+		while (true) {
+			try {
+				Thread.sleep(15000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 }
