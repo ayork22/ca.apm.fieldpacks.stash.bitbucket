@@ -18,7 +18,6 @@ public class StashFPwrapper {
 
 	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws ParseException {
-
 		// ******Configure log4J*****
 		final Logger logger = Logger.getLogger(StashFPwrapper.class);
 		{
@@ -30,9 +29,11 @@ public class StashFPwrapper {
 
 			public void run() {
 
-				String MetricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
-
-				logger.debug("MetricLocation  = " + MetricRootLocation);
+				String metricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
+				// Add Rest API /repos to Stash URL provided in properties file
+				String StashRepoUrl = GetPropertiesFile.getPropertyValue("StashURL") + "/rest/api/1.0/repos";
+				logger.info("Stash Monitored URL = " + StashRepoUrl);
+				logger.debug("MetricLocation  = " + metricRootLocation);
 
 				// *****Create Metrics******
 				// Array of actual Metrics WITHOUT the metrics KEY in front
@@ -42,32 +43,51 @@ public class StashFPwrapper {
 				// Using Properties File to pass in 'callURL' parameters
 				JSONObject mainWebServiceJSON = null;
 				try {
-					mainWebServiceJSON = (JSONObject) new JSONParser()
-							.parse(WebServiceHandler.callURL(GetPropertiesFile.getPropertyValue("StashURL"),
-									(GetPropertiesFile.getPropertyValue("StashUserName")),
-									(GetPropertiesFile.getPropertyValue("StashPassword"))));
+					mainWebServiceJSON = (JSONObject) new JSONParser().parse(WebServiceHandler.callURL(StashRepoUrl,
+							(GetPropertiesFile.getPropertyValue("StashUserName")),
+							(GetPropertiesFile.getPropertyValue("StashPassword"))));
 				} catch (ParseException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
+					logger.error("No match for user/password combination");
 				}
 
 				// add SIZE to Metrics Using CreateMetric method
 				// metricArray is what is used to build Introscope metrics
-				metricArray.add(createMetric("LongCounter", MetricRootLocation + ":Number of Repos",
-						mainWebServiceJSON.remove("size")));
+				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
+						mainWebServiceJSON.get("size")));
 				metricArray.add(
-						createMetric("LongCounter", MetricRootLocation + ":Limit", mainWebServiceJSON.remove("limit")));
+						createMetric("LongCounter", metricRootLocation + ":Limit", mainWebServiceJSON.get("limit")));
+				metricArray.add(createMetric("StringEvent", metricRootLocation + ":Is Last Page",
+						mainWebServiceJSON.get("isLastPage")));
 
 				// *****Grab Project & Repository info******
 
 				JSONArray values = (JSONArray) mainWebServiceJSON.get("values");
+
+				// ****** # of Users *****************
+				String UserURL = StashRepoUrl.replaceAll("/repos", "/users");
+				metricArray.add(createMetric("LongCounter", metricRootLocation + ":Number of Repos",
+						mainWebServiceJSON.get("size")));
+
+				JSONObject userJSON = null;
+				try {
+					userJSON = (JSONObject) new JSONParser().parse(
+							WebServiceHandler.callURL(UserURL, (GetPropertiesFile.getPropertyValue("StashUserName")),
+									(GetPropertiesFile.getPropertyValue("StashPassword"))));
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				metricArray.add(
+						createMetric("LongCounter", metricRootLocation + ":Number of Users", userJSON.get("size")));
 
 				// ******For loop over the Number of Values*******
 				// .size = Array size
 				for (int i = 0; i < values.size(); i++) {
 
 					JSONObject REPO = (JSONObject) values.get(i);
-					String metricLocation = MetricRootLocation + "|" + ((JSONObject) REPO.get("project")).get("name")
+					String metricLocation = metricRootLocation + "|" + ((JSONObject) REPO.get("project")).get("name")
 							+ "|" + REPO.get("name");
 							// Casting to Array
 
@@ -97,17 +117,15 @@ public class StashFPwrapper {
 					logger.debug("Pull Request URLs  = " + RepoURL);
 
 					long size = ((Long) RepoJSON.get("size")).intValue();
-
 					// *** If RepoJSON Array does NOT have any pull request info
 					// then skip that repository
 					// if size not zero do this
 					if (size != 0) {
 						metricArray.add(createMetric("LongCounter", metricLocation + ":Pull Requests - Total",
-								RepoJSON.remove("size")));
+								RepoJSON.get("size")));
 						metricArray.add(createMetric("StringEvent", metricLocation + ":Is Last Page",
-								RepoJSON.remove("isLastPage")));
-						metricArray
-								.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.remove("limit")));
+								RepoJSON.get("isLastPage")));
+						metricArray.add(createMetric("LongCounter", metricLocation + ":Limit", RepoJSON.get("limit")));
 
 						JSONArray PullState = (JSONArray) RepoJSON.get("values");
 
@@ -146,9 +164,13 @@ public class StashFPwrapper {
 								.add(createMetric("LongCounter", metricLocation + ":Pull Requests - Merged", merges));
 						metricArray.add(
 								createMetric("LongCounter", metricLocation + ":Pull Requests - Declined", declines));
-						metricArray.add(createMetric("StringEvent", MetricRootLocation + ":PluginSuccess", ("YES")));
 					}
 				}
+				metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
+
+				// Report TimeStamp of last plugin RunTime
+				long timestamp = System.currentTimeMillis();
+				metricArray.add(createMetric("TimeStamp", metricRootLocation + ":Last Reporting Interval", timestamp));
 
 				JSONObject metricsToEPAgent = new JSONObject();
 				// pre-pends "metrics" to the 'metricArray as this is required
@@ -168,18 +190,27 @@ public class StashFPwrapper {
 				metric.put("name", name);
 				metric.put("value", value);
 				return metric;
-
 			}
 		};
 
 		// Executer to trigger runnable thread. Delay time is defined in the
-		// stash.properties  DEFAULTS to 5 minutes
+		// stash.properties DEFAULTS to 5 minutes if no value provided or below 5 minutes
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-		if (Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
-			executor.scheduleAtFixedRate(servers, 0, 5, TimeUnit.MINUTES);
+		if ((GetPropertiesFile.getPropertyValue("delaytime").isEmpty()) || Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
+			executor.scheduleAtFixedRate(servers, 0, 2, TimeUnit.MINUTES);
+		} 
+			else {
+			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")),
+					TimeUnit.MINUTES);
 		}
-		else {
-			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")), TimeUnit.MINUTES);
+		// Loop to keep Main Thread alive
+		while (true) {
+			try {
+				Thread.sleep(15000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 }
