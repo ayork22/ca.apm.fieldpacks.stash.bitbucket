@@ -1,4 +1,4 @@
-package com.apm.stash;
+package com.apm.fieldpacks.stash;
 
 import java.io.FileInputStream;
 import java.io.IOException;

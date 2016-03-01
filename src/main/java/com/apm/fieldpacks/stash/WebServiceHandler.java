@@ -1,4 +1,5 @@
-package com.apm.stash;
+package com.apm.fieldpacks.stash;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class WebServiceHandler {
 
 	/**
 	 * Get JSON data from WebService Provider
-	 * 
+	 *
 	 * @param WebServiceURL
 	 *            = WebService URL
 	 * @param UserName
