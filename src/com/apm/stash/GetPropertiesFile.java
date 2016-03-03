@@ -20,7 +20,7 @@ public class GetPropertiesFile {
 			prop.load(input);
 
 		} catch (IOException ex) {
-			System.out.println("No Properties File Found");
+			StashFPwrapper.logger.info("No Properties File Found");
 			ex.printStackTrace();
 
 		} finally {

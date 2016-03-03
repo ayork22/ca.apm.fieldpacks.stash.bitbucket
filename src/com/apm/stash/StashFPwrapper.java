@@ -1,6 +1,8 @@
 package com.apm.stash;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +21,7 @@ public class StashFPwrapper {
 	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws ParseException {
 		// ******Configure log4J*****
-		final Logger logger = Logger.getLogger(StashFPwrapper.class);
+//		final Logger logger = Logger.getLogger(StashFPwrapper.class);
 		{
 			String log4jConfigFile = System.getProperty("user.dir") + File.separator + "stash.properties";
 			PropertyConfigurator.configure(log4jConfigFile);
@@ -31,10 +33,10 @@ public class StashFPwrapper {
 
 				String metricRootLocation = (GetPropertiesFile.getPropertyValue("MetricLocation"));
 				// Add Rest API /repos to Stash URL provided in properties file
-				String StashRepoUrl = GetPropertiesFile.getPropertyValue("StashURL") + "/rest/api/1.0/repos";
+				String StashRepoUrl = GetPropertiesFile.getPropertyValue("HTTPorHTTPS") + "://" + GetPropertiesFile.getPropertyValue("StashURL") + "/rest/api/1.0/repos";
 				logger.info("Stash Monitored URL = " + StashRepoUrl);
 				logger.debug("MetricLocation  = " + metricRootLocation);
-
+				
 				// *****Create Metrics******
 				// Array of actual Metrics WITHOUT the metrics KEY in front
 				JSONArray metricArray = new JSONArray();
@@ -94,14 +96,35 @@ public class StashFPwrapper {
 					// ********Get URL for each repository******
 					String RepoURL = (String) ((JSONObject) ((JSONArray) ((JSONObject) REPO.get("links")).get("self"))
 							.get(0)).get("href");
+					
+					System.out.println(RepoURL.split("/")[3]);
+			//		Break = Stops loop totally.  i.e. Get out of loop
+			//		Return = Kills program
+					if (! RepoURL.split("/")[3].startsWith("projects")) continue;
+				//	System.out.println("RepoURL = " + RepoURL);
+					
+					
+					String project = RepoURL.split("/") [4];
+					System.out.println("Project =" + project);
+					
+					String repository = RepoURL.split("/") [6];
+					System.out.println("repo =" + repository);
 
 					// Get the PROJECT & REPO name
-					String project = (String) ((JSONObject) REPO.get("project")).get("key");
-					String repository = (String) REPO.get("name");
+//					String project = (String) ((JSONObject) REPO.get("project")).get("key");
+//					String repository = (String) REPO.get("name");
 					// Update URL to Pull-Request URL
 					// Split URL based on the "/"
-					RepoURL = "http://" + RepoURL.split("/")[2] + "/rest/api/1.0/projects/" + project + "/repos/"
-							+ repository + "/pull-requests";
+//					RepoURL = "http://" + RepoURL.split("/")[2] + "/rest/api/1.0/projects/" + project + "/repos/"
+//							+ repository + "/pull-requests";
+					
+					try {
+						RepoURL = GetPropertiesFile.getPropertyValue("HTTPorHTTPS") + "://" + RepoURL.split("/")[2] + "/rest/api/1.0/projects/" + URLEncoder.encode(project,"UTF-8") + "/repos/"
+								+ URLEncoder.encode(repository,"UTF-8") + "/pull-requests";
+					} catch (UnsupportedEncodingException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 
 					// *****Make Pull-Request WebService call*****
 					// Call WebService, but give it new REPO URL
@@ -166,7 +189,7 @@ public class StashFPwrapper {
 								createMetric("LongCounter", metricLocation + ":Pull Requests - Declined", declines));
 					}
 				}
-				metricArray.add(createMetric("StringEvent", metricRootLocation + ":PluginSuccess", ("YES")));
+				metricArray.add(createMetric("StringEvent", metricRootLocation + ":Plugin Success", ("YES")));
 
 				// Report TimeStamp of last plugin RunTime
 				long timestamp = System.currentTimeMillis();
@@ -196,8 +219,8 @@ public class StashFPwrapper {
 		// Executer to trigger runnable thread. Delay time is defined in the
 		// stash.properties DEFAULTS to 5 minutes if no value provided or below 5 minutes
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-		if ((GetPropertiesFile.getPropertyValue("delaytime").isEmpty()) || Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 5) {
-			executor.scheduleAtFixedRate(servers, 0, 2, TimeUnit.MINUTES);
+		if ((GetPropertiesFile.getPropertyValue("delaytime").isEmpty()) || Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")) < 15) {
+			executor.scheduleAtFixedRate(servers, 0, 15, TimeUnit.MINUTES);
 		} 
 			else {
 			executor.scheduleAtFixedRate(servers, 0, Integer.parseInt(GetPropertiesFile.getPropertyValue("delaytime")),

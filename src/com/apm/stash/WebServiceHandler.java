@@ -8,7 +8,11 @@ import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 
+import org.apache.commons.codec.binary.Base64;
+
+import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
 
 public class WebServiceHandler {
@@ -81,6 +85,10 @@ public class WebServiceHandler {
 
 			String authStringEnc = new BASE64Encoder().encode(authString.getBytes());
 
+//			Replace Spaces in URL with %20		
+//			String newWSURL = WebServiceURL.split("/") [3];
+//			System.out.println(newWSURL);
+			
 			URL url = new URL(WebServiceURL);
 			URLConnection urlConnection = url.openConnection();
 			urlConnection.setRequestProperty("Authorization", "Basic " + authStringEnc);
@@ -93,7 +101,8 @@ public class WebServiceHandler {
 				sb.append(charArray, 0, numCharsRead);
 			}
 
-		} catch (MalformedURLException e) {
+//		}
+			} catch (MalformedURLException e) {
 			e.printStackTrace();
 			StashFPwrapper.logger.error(e + " - Can't connect to BitBucket Server");
 		} catch (IOException e) {
